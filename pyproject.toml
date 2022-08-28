@@ -15,3 +15,15 @@ classifiers = [
 python-source = "python"
 
 [tool.pyright]
+
+[tool.pytest.ini-options]
+minversion = "6.0"
+testpaths = [
+    "python/tests"
+]
+
+[tool.pylint.messages_control]
+disable = [
+    "missing-module-docstring",
+    "missing-function-docstring"
+]

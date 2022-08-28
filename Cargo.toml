@@ -9,4 +9,6 @@ name = "tensorboars"
 crate-type = ["cdylib"]
 
 [dependencies]
+byteorder = "1.4.3"
+crc = "3.0.0"
 pyo3 = { version = "0.16.5", features = ["extension-module"] }
