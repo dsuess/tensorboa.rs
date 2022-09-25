@@ -12,9 +12,10 @@ crate-type = ["cdylib"]
 [dependencies]
 byteorder = "1.4.3"
 crc32c = "0.6.3"
-protobuf = "3.1.0"
+prost = "0.11.0"
 pyo3 = { version = "0.16.5", features = ["extension-module"] }
 
 [build-dependencies]
-protobuf-codegen = "3.1.0"
+prost-build = "0.11.1"
+protobuf-src = "1.1.0"
 protoc-bin-vendored = "3.0.0"

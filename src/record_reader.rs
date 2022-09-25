@@ -7,7 +7,7 @@ use std::path::Path;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-struct RecordReader {
+pub struct RecordReader {
     buf: BufReader<File>,
     last_elem_valid: bool,
 }
