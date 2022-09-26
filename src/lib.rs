@@ -1,6 +1,5 @@
+mod io;
 mod proto;
-mod record_reader;
-mod summary_parser;
 
 use pyo3::prelude::*;
 
