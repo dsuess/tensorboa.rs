@@ -6,7 +6,8 @@ setup:
     ln -f -s `pwd`/hooks/* .git/hooks
 
 test:
-    pytest -n auto
+    maturin develop
+    pytest
 
 lint:
     isort --check python/tensorboars python/tests
