@@ -17,7 +17,7 @@ impl SummaryReader {
     #[new]
     // FIXME Can we accept both str and pathlib.Path
     fn new(path: String) -> PyResult<Self> {
-        let parser = return Ok(Self {
+        return Ok(Self {
             path: PathBuf::from(&path),
             reader: None,
             parser: io::SummaryParser {},
