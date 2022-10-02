@@ -26,3 +26,6 @@ fix:
    black --include .py --exclude ".pyc|.pyi|.so" python/tensorboars python/tests
    black --pyi --include .pyi --exclude ".pyc|.py|.so" python/tensorboars python/tests
    cargo fmt
+
+list-todo:
+    pylint --disable=all --enable=fixme --score=no python/tensorboars python/tests
