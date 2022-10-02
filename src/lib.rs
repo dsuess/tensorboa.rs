@@ -1,8 +1,8 @@
 mod io;
 mod proto;
 
-use pyo3::{exceptions::PyRuntimeError, prelude::*, PyIterProtocol};
-use std::{iter::Sum, path::PathBuf};
+use pyo3::prelude::*;
+use std::path::PathBuf;
 
 #[pyclass(unsendable)]
 struct SummaryIterator {
@@ -25,8 +25,8 @@ impl SummaryIterator {
     }
 }
 
-#[pyproto]
-impl PyIterProtocol for SummaryIterator {
+#[pymethods]
+impl SummaryIterator {
     fn __iter__(slf: PyRef<Self>) -> PyRef<Self> {
         slf
     }
@@ -56,10 +56,7 @@ impl SummaryReader {
             path: PathBuf::from(&path),
         });
     }
-}
 
-#[pyproto]
-impl PyIterProtocol for SummaryReader {
     fn __iter__(slf: PyRef<Self>) -> PyResult<Py<SummaryIterator>> {
         let result = SummaryIterator {
             reader: io::RecordReader::new(&slf.path)?.into_iter(),
