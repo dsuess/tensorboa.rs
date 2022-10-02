@@ -9,6 +9,4 @@ def test_data_dir() -> Path:
     return Path(__file__).parents[2] / "data"
 
 
-@pytest.fixture(scope="session")
-def tbfile_simple_scalars(test_data_dir: Path) -> str:
-    return str(test_data_dir / "events.out.tfevents.1661684667.applepie4")
+# https://tensorboard.dev/static/log_set-2021-03-11.zip
