@@ -6,6 +6,7 @@ pyright==1.1.272
 pylint==2.15.0
 numpy==1.23.2
 maturin==0.13.2
+pillow==9.2.0
 
 # work around tensorboardX issue
 protobuf==3.20.*

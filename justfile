@@ -9,6 +9,10 @@ test:
     maturin develop
     pytest
 
+dev:
+    maturin develop
+    pytest -m dev
+
 lint:
     isort --check python/tensorboars python/tests
     black --check --include .py --exclude ".pyc|.pyi|.so" python/tensorboars python/tests

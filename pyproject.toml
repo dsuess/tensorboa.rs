@@ -16,15 +16,23 @@ python-source = "python"
 
 [tool.pyright]
 
-[tool.pytest.ini-options]
+[tool.pytest.ini_options]
 minversion = "6.0"
 testpaths = [
     "python/tests"
 ]
-addopts = "-s"
+addopts = "-m \"not dev\" --strict-markers"
+markers = [
+    "dev"
+]
+filterwarnings = [
+   "ignore:ANTIALIAS is deprecated*:DeprecationWarning"
+]
 
 [tool.pylint.messages_control]
 disable = [
     "missing-module-docstring",
-    "missing-function-docstring"
+    "missing-function-docstring",
+    "missing-class-docstring",
+    "fixme"
 ]
