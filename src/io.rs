@@ -75,15 +75,15 @@ impl Iterator for RecordReader {
 }
 pub struct SummaryParser {}
 
-type Value = proto::summary::value::Value;
+pub type Value = proto::summary::value::Value;
 
 #[derive(PartialEq, Debug)]
 pub struct Entry {
     // TODO Can we infer this from the proto?
-    tag: String,
-    step: i64,
-    wall_time: f64,
-    value: Value,
+    pub tag: String,
+    pub step: i64,
+    pub wall_time: f64,
+    pub value: Value,
 }
 
 impl SummaryParser {

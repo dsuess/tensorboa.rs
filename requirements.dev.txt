@@ -4,6 +4,7 @@ black==22.6.0
 isort==5.10.1
 pyright==1.1.272
 pylint==2.15.0
+numpy==1.23.2
 maturin==0.13.2
 
 # work around tensorboardX issue

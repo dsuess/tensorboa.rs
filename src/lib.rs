@@ -1,15 +1,50 @@
 mod io;
 mod proto;
 
-use pyo3::{exceptions::PyRuntimeError, prelude::*};
-use std::path::PathBuf;
+use pyo3::{exceptions::PyRuntimeError, prelude::*, PyIterProtocol};
+use std::{iter::Sum, path::PathBuf};
+
+#[pyclass(unsendable)]
+struct SummaryIterator {
+    reader: io::RecordReader,
+    parser: io::SummaryParser,
+}
+
+impl SummaryIterator {
+    fn fetch_next_valid_value(&mut self) -> Option<io::Value> {
+        loop {
+            // TODO Better error handling
+            // Return if reader is finished
+            let data = self.reader.next()?.unwrap();
+            // Skip all elems that are converted to None by the parser
+            match self.parser.parse(&data) {
+                Some(val) => return Some(val.value),
+                None => continue,
+            };
+        }
+    }
+}
+
+#[pyproto]
+impl PyIterProtocol for SummaryIterator {
+    fn __iter__(slf: PyRef<Self>) -> PyRef<Self> {
+        slf
+    }
+
+    fn __next__(mut slf: PyRefMut<Self>) -> Option<f32> {
+        let value = slf.fetch_next_valid_value()?;
+
+        match value {
+            io::Value::SimpleValue(x) => Some(x),
+            _ => panic!("Cant convert {:?} to pyvalue", value),
+        }
+    }
+}
 
 /// Formats the sum of two numbers as string.
 #[pyclass(unsendable)]
 struct SummaryReader {
     path: PathBuf,
-    reader: Option<io::RecordReader>,
-    parser: io::SummaryParser,
 }
 
 #[pymethods]
@@ -19,34 +54,21 @@ impl SummaryReader {
     fn new(path: String) -> PyResult<Self> {
         return Ok(Self {
             path: PathBuf::from(&path),
-            reader: None,
-            parser: io::SummaryParser {},
         });
     }
+}
 
-    fn __enter__(mut slf: PyRefMut<'_, Self>) -> PyResult<PyRefMut<'_, Self>> {
-        if slf.reader.is_some() {
-            return Err(PyRuntimeError::new_err("Tried to reenter"));
-        }
-
-        slf.reader = Some(io::RecordReader::new(&slf.path)?);
-        Ok(slf)
-    }
-
-    fn __exit__(
-        mut slf: PyRefMut<'_, Self>,
-        _exc_type: PyObject,
-        _exc_value: PyObject,
-        _traceback: PyObject,
-    ) -> PyResult<PyRefMut<'_, Self>> {
-        if slf.reader.is_none() {
-            return Err(PyRuntimeError::new_err("Tried to exit outside enter"));
-        }
-
-        slf.reader = None;
-        Ok(slf)
+#[pyproto]
+impl PyIterProtocol for SummaryReader {
+    fn __iter__(slf: PyRef<Self>) -> PyResult<Py<SummaryIterator>> {
+        let result = SummaryIterator {
+            reader: io::RecordReader::new(&slf.path)?.into_iter(),
+            parser: io::SummaryParser {},
+        };
+        Py::new(slf.py(), result)
     }
 }
+
 /// A Python module implemented in Rust.
 #[pymodule]
 fn tensorboars(_py: Python, m: &PyModule) -> PyResult<()> {
