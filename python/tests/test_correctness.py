@@ -1,6 +1,5 @@
 # pylint: disable=redefined-outer-name
 
-import itertools as it
 from pathlib import Path
 from typing import NamedTuple, Tuple
 
@@ -36,32 +35,31 @@ def test_summary_reader_simple_scalar(
 
 class ImageTestCase(NamedTuple):
     path: str
-    dtype: np.dtype
-    n_channels: int
-    shape: Tuple[int, int]
+    shape: Tuple[int, ...]
 
 
-# TODO Add dataformats
-@pt.fixture(scope="function", params=it.product([np.uint8, np.float32], [1, 3, 4]))
+# TODO tensorboardX seems to convert grayscale to RGB, so we need to come up
+#      with a different testing-strategy for other image types
+@pt.fixture(scope="function", params=[3, 4])
 def tb_image(request, tmp_path: Path) -> ImageTestCase:
     outdir = tmp_path / "simple_scalar"
-    dtype, n_channels = request.param
+    n_channels = request.param
+    dtype = np.uint8
+
     with tbx.SummaryWriter(str(outdir)) as writer:
         for i in range(2):
             img = i * np.ones((n_channels, 10, 10), dtype=dtype)
-            writer.add_image("img", img, global_step=i)
+            writer.add_image("img", img, global_step=i, dataformats="CHW")
 
-    return ImageTestCase(str(detect_tbfile(outdir)), dtype, n_channels, (10, 10))
+    return ImageTestCase(str(detect_tbfile(outdir)), (n_channels, 10, 10))
 
 
-@pt.mark.dev
 def test_summary_reader_image(
     tb_image: ImageTestCase,
 ):
     reader = SummaryReader(tb_image.path)
     imgs = list(reader)
 
-    shape = (*tb_image.shape, tb_image.n_channels)
     assert len(imgs) == 2
-    np.testing.assert_array_equal(imgs[0], np.zeros(shape, dtype=tb_image.dtype))
-    np.testing.assert_array_equal(imgs[1], np.ones(shape, dtype=tb_image.dtype))
+    np.testing.assert_array_equal(imgs[0], np.zeros(tb_image.shape, dtype=np.uint8))
+    np.testing.assert_array_equal(imgs[1], np.ones(tb_image.shape, dtype=np.uint8))

@@ -1,7 +1,12 @@
 mod io;
 mod proto;
 
+use image::io::Reader as ImageReader;
+use image::DynamicImage;
+use nshare::ToNdarray3;
+use numpy::IntoPyArray;
 use pyo3::prelude::*;
+use std::io::Cursor;
 use std::path::PathBuf;
 
 #[pyclass(unsendable)]
@@ -23,6 +28,29 @@ impl SummaryIterator {
             };
         }
     }
+
+    fn parse_scalar(&self, x: f32, py: Python) -> PyObject {
+        x.into_py(py)
+    }
+
+    fn parse_image(&self, data: proto::summary::Image, py: Python) -> PyObject {
+        println!("Got {:}", data.colorspace);
+        // TODO Proper error handling
+        // TODO Remove copies
+        let img = ImageReader::new(Cursor::new(&data.encoded_image_string))
+            .with_guessed_format()
+            .unwrap()
+            .decode()
+            .unwrap();
+
+        let array = match img {
+            DynamicImage::ImageRgb8(img) => img.into_ndarray3(),
+            DynamicImage::ImageRgba8(img) => img.into_ndarray3(),
+            _ => panic!("Unsupported image type"),
+        };
+
+        array.into_pyarray(py).to_object(py)
+    }
 }
 
 #[pymethods]
@@ -31,11 +59,12 @@ impl SummaryIterator {
         slf
     }
 
-    fn __next__(mut slf: PyRefMut<Self>) -> Option<f32> {
+    fn __next__(mut slf: PyRefMut<Self>) -> Option<PyObject> {
         let value = slf.fetch_next_valid_value()?;
 
         match value {
-            io::Value::SimpleValue(x) => Some(x),
+            io::Value::SimpleValue(x) => Some(slf.parse_scalar(x, slf.py())),
+            io::Value::Image(img) => Some(slf.parse_image(img, slf.py())),
             _ => panic!("Cant convert {:?} to pyvalue", value),
         }
     }

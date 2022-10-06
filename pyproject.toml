@@ -26,7 +26,8 @@ markers = [
     "dev"
 ]
 filterwarnings = [
-   "ignore:ANTIALIAS is deprecated*:DeprecationWarning"
+   "ignore:ANTIALIAS is deprecated*:DeprecationWarning",
+   "ignore::DeprecationWarning:tensorboardX.*"
 ]
 
 [tool.pylint.messages_control]

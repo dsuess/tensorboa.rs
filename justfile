@@ -18,7 +18,7 @@ lint:
     black --check --include .py --exclude ".pyc|.pyi|.so" python/tensorboars python/tests
     black --check --pyi --include .pyi --exclude ".pyc|.py|.so" python/tensorboars python/tests
     cargo fmt --check
-    pylint python/tensorboars python/tests
+    ruff python/
     pyright python/tensorboars python/tests
 
 fix:
@@ -26,6 +26,7 @@ fix:
    black --include .py --exclude ".pyc|.pyi|.so" python/tensorboars python/tests
    black --pyi --include .pyi --exclude ".pyc|.py|.so" python/tensorboars python/tests
    cargo fmt
+   ruff --fix python/
 
 list-todo:
     pylint --disable=all --enable=fixme --score=no python/tensorboars python/tests
