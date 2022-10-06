@@ -37,3 +37,6 @@ disable = [
     "missing-class-docstring",
     "fixme"
 ]
+
+[tool.isort]
+py_version=310

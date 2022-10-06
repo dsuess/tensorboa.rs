@@ -2,69 +2,38 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
-      - master
-  pull_request:
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   linux:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: messense/maturin-action@v1
+    - uses: extractions/setup-just@v1
       with:
-        manylinux: auto
-        command: build
-        args: --release --sdist -o dist --find-interpreter
-    - name: Upload wheels
-      uses: actions/upload-artifact@v2
+        just-version: '1.5.0'
+    ## Rust
+    - uses: actions-rs/toolchain@v1
       with:
-        name: wheels
-        path: dist
-
-  windows:
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: messense/maturin-action@v1
+        profile: minimal
+        toolchain: stable
+        override: true
+    - uses: Swatinem/rust-cache@v2
+    - run: cargo test
+    ## Python
+    - uses: actions/setup-python@v2
+    - uses: syphar/restore-virtualenv@v1
+      id: cache-virtualenv
       with:
-        command: build
-        args: --release -o dist --find-interpreter
-    - name: Upload wheels
-      uses: actions/upload-artifact@v2
-      with:
-        name: wheels
-        path: dist
-
-  macos:
-    runs-on: macos-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: messense/maturin-action@v1
-      with:
-        command: build
-        args: --release -o dist --universal2 --find-interpreter
-    - name: Upload wheels
-      uses: actions/upload-artifact@v2
-      with:
-        name: wheels
-        path: dist
-
-  release:
-    name: Release
-    runs-on: ubuntu-latest
-    if: "startsWith(github.ref, 'refs/tags/')"
-    #needs: [ macos, windows, linux ]
-    needs: [ macos, linux ]
-    steps:
-      - uses: actions/download-artifact@v2
-        with:
-          name: wheels
-      - name: Publish to PyPI
-        uses: messense/maturin-action@v1
-        env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        with:
-          command: upload
-          args: --skip-existing *
+        requirement_files: requirements.dev.txt
+    - uses: syphar/restore-pip-download-cache@v1
+      if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+    - run: pip install -r requirements.dev.txt
+      if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+    - name: Print dependencies
+      run: python3 --version && python3 -m pip freeze
+    - run: . /home/runner/.virtualenvs/.venv/bin/activate && just test
+    - run: . /home/runner/.virtualenvs/.venv/bin/activate && just lint
