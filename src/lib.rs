@@ -44,6 +44,7 @@ impl SummaryIterator {
             .unwrap();
 
         let array = match img {
+            // FIXME Return image in HWC channel order!
             DynamicImage::ImageRgb8(img) => img.into_ndarray3(),
             DynamicImage::ImageRgba8(img) => img.into_ndarray3(),
             _ => panic!("Unsupported image type"),
