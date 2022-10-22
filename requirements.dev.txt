@@ -1,6 +1,6 @@
 # Testing
 pytest==7.1.2
-pytest-benchmark=3.4.1
+pytest-benchmark==3.4.1
 
 tensorboardX==2.5
 tensorboard==2.10.1

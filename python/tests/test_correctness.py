@@ -4,13 +4,9 @@ from typing import List, NamedTuple
 import numpy as np
 import pytest as pt
 import tensorboardX as tbx
+from tests.utils import detect_tbfile
 
 from tensorboars import SummaryReader
-
-
-def detect_tbfile(outdir: Path) -> Path:
-    (match,) = outdir.glob("events.out.tfevents.*")
-    return match
 
 
 @pt.fixture(scope="function")
