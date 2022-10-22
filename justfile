@@ -14,7 +14,7 @@ dev:
     pytest -m dev
 
 lint:
-    isort --verbose python/tensorboars python/tests
+    isort --check python/tensorboars python/tests
     black --check --include .py --exclude ".pyc|.pyi|.so" python/tensorboars python/tests
     black --check --pyi --include .pyi --exclude ".pyc|.py|.so" python/tensorboars python/tests
     cargo fmt --check

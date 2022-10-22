@@ -39,4 +39,4 @@ disable = [
 ]
 
 [tool.isort]
-py_version=310
+py_version=39

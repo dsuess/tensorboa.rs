@@ -1,5 +1,7 @@
 # Testing
 pytest==7.1.2
+pytest-benchmark=3.4.1
+
 tensorboardX==2.5
 tensorboard==2.10.1
 numpy==1.23.2
@@ -8,8 +10,8 @@ pillow==9.2.0
 # Linting
 black==22.6.0
 isort==5.10.1
-pyright==1.1.272
-ruff==0.0.55
+pyright==1.1.276
+ruff==0.0.82
 
 # Building
 maturin==0.13.2
