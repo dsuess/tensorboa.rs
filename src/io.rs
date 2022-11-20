@@ -78,7 +78,6 @@ impl Iterator for RecordReader {
         }
     }
 }
-pub struct SummaryParser {}
 
 #[derive(PartialEq, Debug)]
 pub enum Value {
@@ -95,59 +94,57 @@ pub struct Entry {
     pub value: Value,
 }
 
-impl SummaryParser {
-    fn parse_image(img: proto::summary::Image) -> Array3<u8> {
-        // TODO Proper error handling
-        // TODO Remove copies
-        let img = ImageReader::new(Cursor::new(&img.encoded_image_string))
-            .with_guessed_format()
-            .unwrap()
-            .decode()
-            .unwrap();
+fn parse_image(img: proto::summary::Image) -> Array3<u8> {
+    // TODO Proper error handling
+    // TODO Remove copies
+    let img = ImageReader::new(Cursor::new(&img.encoded_image_string))
+        .with_guessed_format()
+        .unwrap()
+        .decode()
+        .unwrap();
 
-        match img {
-            // FIXME Return image in HWC channel order!
-            DynamicImage::ImageRgb8(img) => img.into_ndarray3(),
-            DynamicImage::ImageRgba8(img) => img.into_ndarray3(),
-            _ => panic!("Unsupported image type"),
-        }
+    match img {
+        // FIXME Return image in HWC channel order!
+        DynamicImage::ImageRgb8(img) => img.into_ndarray3(),
+        DynamicImage::ImageRgba8(img) => img.into_ndarray3(),
+        _ => panic!("Unsupported image type"),
     }
+}
 
-    pub fn parse(&self, elem: &[u8]) -> Option<Entry> {
-        // TODO Better error handling, this parser might not even be
-        let event = match proto::Event::decode(elem) {
-            Ok(event) => event,
-            Err(_) => return None,
-        };
-        let what = event.what?;
+pub fn parse_summary(elem: &[u8]) -> Option<Entry> {
+    // TODO Better error handling, this parser might not even be
+    let event = match proto::Event::decode(elem) {
+        Ok(event) => event,
+        Err(_) => return None,
+    };
+    let what = event.what?;
 
-        let mut vals = match what {
-            proto::event::What::Summary(summary) => summary,
-            // TODO Shall we handle other entries as well
-            _ => return None,
-        }
-        .value;
-
-        let value = match vals.len() {
-            0 => None,
-            1 => Some(vals.remove(0)),
-            _ => panic!("Cant deal with more than one value"), // FIXME
-        }?;
-
-        let parsed_value: Value = match value.value? {
-            proto::summary::value::Value::SimpleValue(x) => Some(Value::Scalar(x)),
-            proto::summary::value::Value::Image(img) => Some(Value::Image(Self::parse_image(img))),
-            _ => None,
-        }?;
-
-        let result = Entry {
-            step: event.step,
-            wall_time: event.wall_time,
-            tag: value.tag,
-            value: parsed_value,
-        };
-        Some(result)
+    let mut vals = match what {
+        proto::event::What::Summary(summary) => summary,
+        // TODO Shall we handle other entries as well
+        _ => return None,
     }
+    .value;
+
+    let value = match vals.len() {
+        0 => None,
+        1 => Some(vals.remove(0)),
+        _ => panic!("Cant deal with more than one value"), // FIXME
+    }?;
+
+    let parsed_value: Value = match value.value? {
+        proto::summary::value::Value::SimpleValue(x) => Some(Value::Scalar(x)),
+        proto::summary::value::Value::Image(img) => Some(Value::Image(parse_image(img))),
+        _ => None,
+    }?;
+
+    let result = Entry {
+        step: event.step,
+        wall_time: event.wall_time,
+        tag: value.tag,
+        value: parsed_value,
+    };
+    Some(result)
 }
 
 #[cfg(test)]
@@ -184,14 +181,13 @@ mod parser_tests {
     fn test_scalar_parser() {
         let path = Path::new("data/events.out.tfevents.1661684667.applepie4");
         let reader = RecordReader::new(path).unwrap();
-        let parser = SummaryParser {};
 
         let mut iter = reader.into_iter();
         let elem = iter.next().unwrap().unwrap();
-        assert_eq!(parser.parse(&elem), None); // FileInfo
+        assert_eq!(parse_summary(&elem), None); // FileInfo
 
         for (idx, buf) in iter.enumerate() {
-            let entry = parser.parse(&buf.unwrap()).unwrap();
+            let entry = parse_summary(&buf.unwrap()).unwrap();
             let val = match entry.value {
                 Value::Scalar(val) => val,
                 _ => panic!("Invalid data found in log file"),

@@ -3,27 +3,12 @@ mod proto;
 
 use numpy::IntoPyArray;
 use pyo3::prelude::*;
+use std::io::Result;
 use std::path::PathBuf;
 
 #[pyclass(unsendable)]
 struct SummaryIterator {
-    reader: io::RecordReader,
-    parser: io::SummaryParser,
-}
-
-impl SummaryIterator {
-    fn fetch_next_valid_value(&mut self) -> Option<io::Value> {
-        loop {
-            // TODO Better error handling
-            // Return if reader is finished
-            let data = self.reader.next()?.unwrap();
-            // Skip all elems that are converted to None by the parser
-            match self.parser.parse(&data) {
-                Some(val) => return Some(val.value),
-                None => continue,
-            };
-        }
-    }
+    iterator: Box<dyn Iterator<Item = Option<io::Entry>>>,
 }
 
 #[pymethods]
@@ -33,12 +18,18 @@ impl SummaryIterator {
     }
 
     fn __next__(mut slf: PyRefMut<Self>) -> Option<PyObject> {
-        let value = slf.fetch_next_valid_value()?;
-        let py = slf.py();
+        // Pull items from iterator until next valid element is reached
+        let value = loop {
+            // Single question mark to signify end of loop
+            match slf.iterator.next()? {
+                Some(val) => break val,
+                _ => continue,
+            }
+        };
 
-        match value {
-            io::Value::Scalar(x) => Some(x.into_py(py)),
-            io::Value::Image(img) => Some(img.into_pyarray(py).to_object(py)),
+        match value.value {
+            io::Value::Scalar(x) => Some(x.into_py(slf.py())),
+            io::Value::Image(img) => Some(img.into_pyarray(slf.py()).to_object(slf.py())),
         }
     }
 }
@@ -59,9 +50,13 @@ impl SummaryReader {
     }
 
     fn __iter__(slf: PyRef<Self>) -> PyResult<Py<SummaryIterator>> {
+        // FIXME Better error handling
+        let iterator = io::RecordReader::new(&slf.path)?.into_iter().map(
+            |elem: Result<Vec<u8>>| -> Option<io::Entry> { io::parse_summary(&elem.unwrap()) },
+        );
+
         let result = SummaryIterator {
-            reader: io::RecordReader::new(&slf.path)?.into_iter(),
-            parser: io::SummaryParser {},
+            iterator: Box::new(iterator),
         };
         Py::new(slf.py(), result)
     }
