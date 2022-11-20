@@ -1,7 +1,12 @@
 use crate::proto;
 use crc32c::crc32c;
+use image::io::Reader as ImageReader;
+use image::DynamicImage;
+use nshare::ToNdarray3;
+use numpy::ndarray::Array3;
 use prost::Message;
 use std::fs::{File, OpenOptions};
+use std::io::Cursor;
 use std::io::{BufReader, Error, ErrorKind, Read, Result};
 use std::iter::Iterator;
 use std::num::Wrapping;
@@ -75,7 +80,11 @@ impl Iterator for RecordReader {
 }
 pub struct SummaryParser {}
 
-pub type Value = proto::summary::value::Value;
+#[derive(PartialEq, Debug)]
+pub enum Value {
+    Scalar(f32),
+    Image(Array3<u8>),
+}
 
 #[derive(PartialEq, Debug)]
 pub struct Entry {
@@ -87,6 +96,23 @@ pub struct Entry {
 }
 
 impl SummaryParser {
+    fn parse_image(img: proto::summary::Image) -> Array3<u8> {
+        // TODO Proper error handling
+        // TODO Remove copies
+        let img = ImageReader::new(Cursor::new(&img.encoded_image_string))
+            .with_guessed_format()
+            .unwrap()
+            .decode()
+            .unwrap();
+
+        match img {
+            // FIXME Return image in HWC channel order!
+            DynamicImage::ImageRgb8(img) => img.into_ndarray3(),
+            DynamicImage::ImageRgba8(img) => img.into_ndarray3(),
+            _ => panic!("Unsupported image type"),
+        }
+    }
+
     pub fn parse(&self, elem: &[u8]) -> Option<Entry> {
         // TODO Better error handling, this parser might not even be
         let event = match proto::Event::decode(elem) {
@@ -108,11 +134,17 @@ impl SummaryParser {
             _ => panic!("Cant deal with more than one value"), // FIXME
         }?;
 
+        let parsed_value: Value = match value.value? {
+            proto::summary::value::Value::SimpleValue(x) => Some(Value::Scalar(x)),
+            proto::summary::value::Value::Image(img) => Some(Value::Image(Self::parse_image(img))),
+            _ => None,
+        }?;
+
         let result = Entry {
             step: event.step,
             wall_time: event.wall_time,
             tag: value.tag,
-            value: value.value?,
+            value: parsed_value,
         };
         Some(result)
     }
@@ -161,7 +193,7 @@ mod parser_tests {
         for (idx, buf) in iter.enumerate() {
             let entry = parser.parse(&buf.unwrap()).unwrap();
             let val = match entry.value {
-                Value::SimpleValue(val) => val,
+                Value::Scalar(val) => val,
                 _ => panic!("Invalid data found in log file"),
             };
             assert_eq!(val, idx as f32);
