@@ -21,7 +21,7 @@ minversion = "6.0"
 testpaths = [
     "python/tests"
 ]
-addopts = "-m \"not benchmark\" --strict-markers --benchmark-group-by param:n_samples"
+addopts = "-m \"not benchmark\" --strict-markers --benchmark-group-by param:n_samples --benchmark-columns median"
 markers = [
     "benchmark:marks benchmarks, which are not run as part of CI"
 ]
