@@ -2,7 +2,9 @@ mod io;
 mod proto;
 
 use numpy::IntoPyArray;
+use pariter::IteratorExt;
 use pyo3::prelude::*;
+
 use std::io::Result;
 use std::path::PathBuf;
 
@@ -50,10 +52,14 @@ impl SummaryReader {
     }
 
     fn __iter__(slf: PyRef<Self>) -> PyResult<Py<SummaryIterator>> {
-        // FIXME Better error handling
-        let iterator = io::RecordReader::new(&slf.path)?.into_iter().map(
-            |elem: Result<Vec<u8>>| -> Option<io::Entry> { io::parse_summary(&elem.unwrap()) },
-        );
+        fn parse(elem: Result<Vec<u8>>) -> Option<io::Entry> {
+            io::parse_summary(&elem.unwrap())
+        }
+
+        let iterator = io::RecordReader::new(&slf.path)?
+            .into_iter()
+            .filter(|elem: &Result<Vec<u8>>| -> bool { elem.is_ok() })
+            .parallel_map(parse);
 
         let result = SummaryIterator {
             iterator: Box::new(iterator),
